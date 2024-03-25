@@ -39,7 +39,7 @@ def init_coco():
     return coco_out
 
 
-def create_coco_dataframe(df, path_coco, keep_tiles='all', keep_years='all', common_labels=None):
+def create_coco_dataframe(df, data_path, path_coco, keep_tiles='all', keep_years='all', common_labels=None):
     '''
     Creates and exports a COCO file with the data provided in a given dataframe.
 
@@ -98,7 +98,7 @@ def create_coco_dataframe(df, path_coco, keep_tiles='all', keep_years='all', com
         if not keep_tile(tile, year, keep_tiles, keep_years): continue
 
         # file_name: should be current netcdf name and parent folder
-        file_name = Path(path.parts[-2]) / path.parts[-1]
+        file_name = path.relative_to(data_path)
         coco['images'].append({
             'license': 1,
             'file_name': str(file_name),

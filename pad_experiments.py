@@ -16,8 +16,7 @@ from model.PAD_unet import UNet
 
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
-from pytorch_lightning.plugins import DDPPlugin
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor, DeviceStatsMonitor
 import torch
 
 from utils.PAD_datamodule import PADDataModule
@@ -26,6 +25,8 @@ from utils.settings.config import RANDOM_SEED, CROP_ENCODING, LINEAR_ENCODER, CL
 
 # Set seed for everything
 pl.seed_everything(RANDOM_SEED)
+
+torch.set_float32_matmul_precision("medium")
 
 
 def resume_or_start(results_path, resume, train, num_epochs, load_checkpoint):
@@ -159,6 +160,8 @@ def main():
                              help='The image bands to use. Must be space separated')
     parser.add_argument('--saved_medians', action='store_true', default=False, required=False,
                              help='Precompute and export the image medians')
+    parser.add_argument('--saved_medians_path', type=str, default='logs/medians', required=False,
+                        help='Path to load exported medians from. Default "logs/medians/".')
     parser.add_argument('--img_size', nargs='+', required=False,
                              help='The size of the subpatch to use as model input. Must be space separated')
     parser.add_argument('--requires_norm', action='store_true', default=False, required=False,
@@ -400,6 +403,7 @@ def main():
             bands=args.bands,
             linear_encoder=LINEAR_ENCODER,
             saved_medians=args.saved_medians,
+            saved_medians_path=Path(args.saved_medians_path),
             window_len=args.window_len,
             fixed_window=args.fixed_window,
             requires_norm=args.requires_norm,
@@ -430,14 +434,13 @@ def main():
                 save_top_k=-1
             )
         )
+        callbacks.append(DeviceStatsMonitor(cpu_stats=True))
 
         tb_logger = pl_loggers.TensorBoardLogger(run_path / 'tensorboard')
 
-        my_ddp = DDPPlugin(find_unused_parameters=True)
-
-        trainer = pl.Trainer(gpus=args.num_gpus,
+        trainer = pl.Trainer(accelerator="auto", devices=args.num_gpus,
                              num_nodes=args.num_nodes,
-                             progress_bar_refresh_rate=20,
+                             #progress_bar_refresh_rate=20,
                              min_epochs=1,
                              max_epochs=max_epoch + 1,
                              check_val_every_n_epoch=1,
@@ -446,15 +449,18 @@ def main():
                              logger=tb_logger,
                              gradient_clip_val=10.0,
                              # early_stop_callback=early_stopping,
-                             checkpoint_callback=True,
-                             resume_from_checkpoint=resume_from_checkpoint,
+                             #checkpoint_callback=True,
+                             #resume_from_checkpoint=resume_from_checkpoint,
                              fast_dev_run=args.devtest,
-                             strategy='ddp' if args.num_gpus > 1 else None,
-                             plugins=[my_ddp]
+                             strategy='ddp' if args.num_gpus > 1 else "auto",
+                             num_sanity_val_steps=0,
+                             profiler='simple',
                              )
 
         # Train model
-        trainer.fit(model, datamodule=dm)
+        trainer.fit(model,
+                    datamodule=dm,
+                    )
     else:
         # Create Data Module
         dm = PADDataModule(
@@ -465,6 +471,7 @@ def main():
             bands=args.bands,
             linear_encoder=LINEAR_ENCODER,
             saved_medians=args.saved_medians,
+            saved_medians_path=Path(args.saved_medians_path),
             window_len=args.window_len,
             fixed_window=args.fixed_window,
             requires_norm=args.requires_norm,
@@ -484,16 +491,14 @@ def main():
         # Setup to multi-GPUs
         dm.setup('test')
 
-        my_ddp = DDPPlugin(find_unused_parameters=True)
-
-        trainer = pl.Trainer(gpus=args.num_gpus,
+        trainer = pl.Trainer(accelerator="auto", devices=args.num_gpus,
                              num_nodes=args.num_nodes,
-                             progress_bar_refresh_rate=20,
+                             #progress_bar_refresh_rate=20,
                              min_epochs=1,
                              max_epochs=2,
                              precision=32,
-                             strategy='ddp' if args.num_gpus > 1 else None,
-                             plugins=[my_ddp]
+                             strategy='ddp' if args.num_gpus > 1 else "auto",
+                             num_sanity_val_steps=0,
                              )
 
         # Test model

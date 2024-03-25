@@ -51,6 +51,7 @@ class PADDataset(Dataset):
             compression: str = 'gzip',
             group_freq: str = '1MS',
             saved_medians: bool = False,
+            saved_medians_path: Path = None,
             linear_encoder: dict = None,
             prefix: str = None,
             window_len: int = 12,
@@ -220,7 +221,8 @@ class PADDataset(Dataset):
         self.num_buckets = len(pd.date_range(start=f'2020-01-01', end=f'2021-01-01', freq=self.group_freq)) - 1
 
         self.saved_medians = saved_medians
-        self.medians_dir = Path(f'logs/medians/{prefix}_medians_{group_freq}_{"".join(self.bands)}/{mode}')
+        #self.medians_dir = Path(f'logs/medians/{prefix}_medians_{group_freq}_{"".join(self.bands)}/{mode}')
+        self.medians_dir = saved_medians_path / mode
 
 
     def get_padding_offset(self):

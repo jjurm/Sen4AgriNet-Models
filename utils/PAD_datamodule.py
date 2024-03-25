@@ -31,6 +31,7 @@ class PADDataModule(pl.LightningDataModule):
             compression: str = 'gzip',
             group_freq: str = '1MS',
             saved_medians: bool = False,
+            saved_medians_path: Path = None,
             linear_encoder: dict = None,
             prefix: str = None,
             window_len: int = 12,
@@ -129,6 +130,7 @@ class PADDataModule(pl.LightningDataModule):
         self.bands = bands
         self.linear_encoder = linear_encoder
         self.saved_medians = saved_medians
+        self.saved_medians_path = saved_medians_path
         self.window_len = window_len
         self.fixed_window = fixed_window
         self.requires_norm = requires_norm
@@ -195,6 +197,7 @@ class PADDataModule(pl.LightningDataModule):
                 bands=self.bands,
                 linear_encoder=self.linear_encoder,
                 saved_medians=self.saved_medians,
+                saved_medians_path=self.saved_medians_path,
                 window_len=self.window_len,
                 fixed_window=self.fixed_window,
                 requires_norm=self.requires_norm,
@@ -218,6 +221,7 @@ class PADDataModule(pl.LightningDataModule):
                 bands=self.bands,
                 linear_encoder=self.linear_encoder,
                 saved_medians=self.saved_medians,
+                saved_medians_path=self.saved_medians_path,
                 window_len=self.window_len,
                 fixed_window=self.fixed_window,
                 requires_norm=self.requires_norm,
@@ -245,6 +249,7 @@ class PADDataModule(pl.LightningDataModule):
                 bands=self.bands,
                 linear_encoder=self.linear_encoder,
                 saved_medians=self.saved_medians,
+                saved_medians_path=self.saved_medians_path,
                 window_len=self.window_len,
                 fixed_window=self.fixed_window,
                 requires_norm=self.requires_norm,

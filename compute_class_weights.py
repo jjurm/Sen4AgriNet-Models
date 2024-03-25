@@ -16,8 +16,8 @@ if __name__ == '__main__':
                         help='Path of COCO files. Default "coco_files/".')
     parser.add_argument('--coco_prefix', type=str, default='exp1_patches2000_strat', required=False,
                         help='Prefix of the COCO file. Default "exp1_patches2000_strat".')
-    parser.add_argument('--medians_prefix', type=str, default='exp1_patches2000_strat_61x61', required=False,
-                        help='Prefix of the medians directory. Default "exp1_patches2000_strat_61x61".')
+    parser.add_argument('--saved_medians_path', type=str, required=True,
+                        help='Prefix of the medians directory.')
     parser.add_argument('--netcdf_path', type=str, default='dataset/netcdf',
                         help='The path containing the netcdf files. Default "dataset/netcdf".')
     parser.add_argument('--out_prefix', type=str, required=False,
@@ -53,10 +53,10 @@ if __name__ == '__main__':
             path_train=coco_train,
             path_val=coco_val,
             group_freq='1MS',
-            prefix=args.medians_prefix,
             bands=['B02', 'B03', 'B04', 'B08'],
             linear_encoder=LINEAR_ENCODER,
             saved_medians=True,
+            saved_medians_path=Path(args.saved_medians_path),
             window_len=12,
             fixed_window=args.fixed_window,
             requires_norm=True,

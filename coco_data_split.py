@@ -184,9 +184,10 @@ if __name__ == '__main__':
             all_patches = data.shape[0]
         else:
             data = create_dataframe(data_path, train_tiles, train_years, common_labels=common_lbls)
-            test_data = create_dataframe(data_path, test_tiles, test_years, common_labels=common_lbls)
             all_patches = data.shape[0]
-            test_patches = test_data.shape[0]
+            if args.experiment in [2, 3]:
+                test_data = create_dataframe(data_path, test_tiles, test_years, common_labels=common_lbls)
+                test_patches = test_data.shape[0]
 
         # Convert labels to one-hot encoding
         mlb = MultiLabelBinarizer()
@@ -209,7 +210,9 @@ if __name__ == '__main__':
         y_val_test = labels_onehot.iloc[val_test_idx, :]
 
         if args.num_patches is None:
-            new_val_r = (X_val_test.shape[0] * val_r) / 100
+            #new_val_r = (X_val_test.shape[0] * val_r) / 100
+            #new_val_r = (val_r / 100) * all_patches / val_test_idx.shape[0]
+            new_val_r = val_r / (val_r + test_r) * 100
         else:
             new_val_r = (args.num_patches * val_r) / X_val_test.shape[0]
 
@@ -235,17 +238,17 @@ if __name__ == '__main__':
             X_val = data.iloc[val_idx, :]
             X_test = test_data.iloc[test_idx, :]
         else:
-            X_test = X_val_test.iloc[test_idx, :]
-            y_test = y_val_test.iloc[test_idx, :]
-
-            if args.num_patches is None:
-                new_test_r = (X_test.shape[0] * test_r) / 100
-            else:
-                # We must further split the test set in order to obtain the required test size
-                new_test_r = (args.num_patches * test_r) / X_test.shape[0]
-
-            stratifier = IterativeStratification(n_splits=2, order=1, sample_distribution_per_fold=[1 - (new_test_r / 100), new_test_r / 100])
-            test_idx, _ = next(stratifier.split(X_test.values[:, np.newaxis], y_test))
+            # X_test = X_val_test.iloc[test_idx, :]
+            # y_test = y_val_test.iloc[test_idx, :]
+            #
+            # if args.num_patches is None:
+            #     new_test_r = (X_test.shape[0] * test_r) / 100
+            # else:
+            #     # We must further split the test set in order to obtain the required test size
+            #     new_test_r = (args.num_patches * test_r) / X_test.shape[0]
+            #
+            # stratifier = IterativeStratification(n_splits=2, order=1, sample_distribution_per_fold=[1 - (new_test_r / 100), new_test_r / 100])
+            # test_idx, _ = next(stratifier.split(X_test.values[:, np.newaxis], y_test))
 
             X_train = data.iloc[train_idx, :]
             X_val = X_val_test.iloc[val_idx, :]
@@ -253,6 +256,7 @@ if __name__ == '__main__':
 
         # Export COCO files
         create_coco_dataframe(df=X_train,
+                              data_path=data_path,
                               path_coco=coco_path / f'{prefix}_coco_train.json',
                               keep_tiles=train_tiles,
                               keep_years=train_years,
@@ -260,6 +264,7 @@ if __name__ == '__main__':
                               )
 
         create_coco_dataframe(df=X_val,
+                              data_path=data_path,
                               path_coco=coco_path / f'{prefix}_coco_val.json',
                               keep_tiles=train_tiles,
                               keep_years=train_years,
@@ -267,6 +272,7 @@ if __name__ == '__main__':
                               )
 
         create_coco_dataframe(df=X_test,
+                              data_path=data_path,
                               path_coco=coco_path / f'{prefix}_coco_test.json',
                               keep_tiles=test_tiles,
                               keep_years=test_years,
@@ -327,4 +333,5 @@ if __name__ == '__main__':
                                    axes[1, 1],
                                    labels_common=common_lbls)
 
+        plt.savefig(coco_path / f'{prefix}_label_distributions.pdf')
         plt.show()

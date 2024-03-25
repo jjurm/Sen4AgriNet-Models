@@ -1,6 +1,5 @@
 import argparse
 from pathlib import Path
-from tqdm import tqdm
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 import pandas as pd
@@ -22,7 +21,7 @@ BANDS = {
 # Extract patches based on this band
 REFERENCE_BAND = 'B02'
 
-def process_patch(out_path, mode, num_buckets, root_coco_path, bands, padded_patch_height,
+def process_patch(out_path, mode, num_buckets, data_path, root_coco_path, bands, padded_patch_height,
                   padded_patch_width, medians_dtype, label_dtype, group_freq, output_size,
                   pad_top, pad_bot, pad_left, pad_right, patch):
     patch_id, patch_info = patch
@@ -33,14 +32,15 @@ def process_patch(out_path, mode, num_buckets, root_coco_path, bands, padded_pat
     #     return
 
     # Calculate medians
-    netcdf = netCDF4.Dataset(root_coco_path / patch_info['file_name'], 'r')
+    netcdf = netCDF4.Dataset(data_path / patch_info['file_name'], 'r')
     medians = get_medians(netcdf, 0, num_buckets, group_freq, bands, padded_patch_height,
                           padded_patch_width, output_size, pad_top, pad_bot,
                           pad_left, pad_right, medians_dtype)
 
     num_bins, num_bands = medians.shape[:2]
 
-    medians = sliding_window_view(medians, [num_bins, num_bands, output_size[0], output_size[1]], [1, 1, output_size[0], output_size[1]]).squeeze()
+    medians = sliding_window_view(medians, [num_bins, num_bands, output_size[0], output_size[1]], [1, 1, output_size[0], output_size[1]]) \
+        .squeeze(axis=(0,1,))  # corresponding to dimensions num_bins and num_bands, since there is no sliding
     # shape: (subpatches_in_row, subpatches_in_col, bins, bands, height, width)
 
     # Save medians
@@ -314,10 +314,10 @@ if __name__ == '__main__':
             coco_path = root_coco_path / f'coco_{mode}.json'
         coco = COCO(coco_path)
 
-        func = partial(process_patch, out_path, mode, num_buckets, root_coco_path,
+        func = partial(process_patch, out_path, mode, num_buckets, data_path, root_coco_path,
                        bands, padded_patch_height, padded_patch_width, medians_dtype,
                        label_dtype, args.group_freq, output_size, pad_top, pad_bot, pad_left, pad_right)
 
-        process_map(func, list(coco.imgs.items()), max_workers=args.num_workers)
+        process_map(func, list(coco.imgs.items()), max_workers=args.num_workers, chunksize=1)
 
     print('Medians saved.\n')
